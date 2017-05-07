@@ -38,6 +38,29 @@ object s {
     val a = system.actorOf(Node.props(1), name = "1")
     val b = system.actorOf(Node.props(2), name = "2")
     val c = system.actorOf(Node.props(3), name = "3")
+ 
+    // neighbors
+    a ! b
+    b ! c
+    c ! a
+    c ! b
+
+    // messages 
+
+    a ! Ball(1)
+    a ! Ball(2)
+    a ! Ball(3)
+
+    b ! Ball(4)
+    b ! Ball(5)
+
+    c ! Ball(6)
+    c ! Ball(7)
+    c ! Ball(8)
+ 
+    a ! Start
+    b ! Start
+    c ! Start
   }
 
 }
@@ -61,7 +84,10 @@ case class Node(id: Int) extends Actor with ActorLogging {
   def initialize(): Actor.Receive = {
     case neighbor: ActorRef => neighbors = neighbors.enqueue(neighbor)  
     case message: Message => messages = messages.enqueue(message) 
-    case Start => context.become(process) 
+    case Start => {
+      log.info(s"${self.path.name} has neighbors ${neighbors.map{_.path.name}}, containing messages ${messages}")
+      context.become(process) 
+    }
   }
 
   def process: Actor.Receive = {
