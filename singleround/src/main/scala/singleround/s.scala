@@ -26,7 +26,6 @@ import java.io.File
 import java.io.PrintWriter
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
-import u._
 
 case object Start
 
@@ -106,7 +105,7 @@ class Node(id: Int) extends Actor with ActorLogging {
   }
 
   def pickedMessage(): Message = {
-    val picked = messages(pick(messages.size))
+    val picked = messages.filterNot(_.equals(Marker)).take(1).head
     messages = messages diff Seq(picked)
     picked
   }
