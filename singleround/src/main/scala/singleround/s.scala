@@ -37,7 +37,7 @@ case object Begin
 sealed trait Snapshot
 case class ByInitiator(balls: Seq[Message]) extends Snapshot
 case class ByReceiver(balls: Seq[Message]) extends Snapshot
-//case class ChannelOnly(balls: Seq[Message]) extends Snapsnot
+case class ChannelOnly(balls: Seq[Message]) extends Snapshot
 
 object s {
 
@@ -71,6 +71,7 @@ object s {
     a ! Start
     b ! Start
     c ! Start
+    
   }
 
 }
@@ -105,9 +106,13 @@ class Node(id: Int) extends Actor with ActorLogging {
   }
 
   def pickedMessage(): Message = {
-    val picked = messages.filterNot(_.equals(Marker)).take(1).head
+    val picked = messages.filterNot(_.equals(Marker)).last //.take(1).head
     messages = messages diff Seq(picked)
     picked
+  }
+
+  def ballsBeforeMarker(): Seq[Message] = {
+    messages.slice(0, messages.indexOf(Marker))
   }
 
   def process: Actor.Receive = {
@@ -115,33 +120,30 @@ class Node(id: Int) extends Actor with ActorLogging {
       observer.map { o => 
         messages = Marker +: messages
         o ! ByInitiator(messages) 
+        log.info(s"[snapshot] [$id] $messages!")
         neighbors.foreach { neighbor =>
           neighbor ! Marker
           neighbor ! pickedMessage 
         }
       }
       snapshotted = true
-      log.info(s"$id is snapshotted!")
     }
     case Marker => {
       // **dummy** simulate send data before marker is received.
       neighbors.foreach { neighbor => neighbor ! pickedMessage }   
-
+      messages = Marker +: messages 
       if(!snapshotted) observer.map { o => 
-        messages = Marker +: messages 
         o ! ByReceiver(messages)
+        log.info(s"[snapshot] [$id] $messages")
         neighbors.map { neighbor => neighbor ! Marker }
         snapshotted = true
-      } else {
-        // TODO: snapshot received message before the latest received Marker  
-        observer.map { o => 
-          // TODO: find balls before marker in messages
-          //o ! ChannelOnly(ballsBeforeMarker) 
-        }  
+      } else observer.map { o => 
+        val channelBalls = ballsBeforeMarker
+        o ! ChannelOnly(channelBalls) 
+        log.info(s"[snapshot] [$id] $messages")
       }
-      neighbors.foreach(_ ! Marker)
     }  
-    case ball: Ball => // TODO: prepend to the head in order of balls being received
+    case ball: Ball => messages = ball +: messages
   }
 }
 
@@ -153,14 +155,20 @@ object Observer {
 class Observer(id: Int) extends Actor with ActorLogging {
 
   var count = 0
+  val prefix = "/tmp/snapshot"
 
   override def preStart() {
-    val dir = new File(s"/tmp/$id")
-    if(!dir.exists) {
-      log.info(s"Create directory $dir!")
-      dir.mkdirs
-    }
+    val dir = new File(s"$prefix/$id")
+    if(dir.exists) rm(dir) 
+    dir.mkdirs
   }   
+
+  def rm(path: File): Boolean = {
+    if(path.isDirectory) {
+      path.listFiles.foreach { e => rm(e) }
+    } 
+    path.delete
+  } 
 
   def write(balls: Seq[Message])(path: String) {
     val file = new File(path)
@@ -170,10 +178,14 @@ class Observer(id: Int) extends Actor with ActorLogging {
   }
  
   override def receive = {
-    case ByInitiator(balls) => write(balls)(s"/tmp/$id/first")
+    case ByInitiator(balls) => write(balls)(s"$prefix/$id/first")
     case ByReceiver(balls) => {
       count += 1
-      write(balls)(s"/tmp/$id/snapshot.$count")
+      write(balls)(s"$prefix/$id/snapshot.$count")
+    }
+    case ChannelOnly(balls) => {
+      count += 1
+      write(balls)(s"$prefix/$id/snapshot.$count")
     }
     case msg@_ => log.warning(s"Observe message: $msg")
   }

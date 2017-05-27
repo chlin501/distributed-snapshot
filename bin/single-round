@@ -1,0 +1,6 @@
+#!/bin/sh
+
+bin=$(dirname $0)
+
+sbt assembly
+scala -cp $bin/..:$bin/../singleround/target/scala-2.12/singleround-assembly-0.0.1.jar singleround.s
