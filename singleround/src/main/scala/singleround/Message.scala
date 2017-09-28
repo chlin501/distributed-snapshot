@@ -17,45 +17,8 @@
  */
 package singleround
 
-import akka.actor.ActorSystem
+sealed trait Message
+case object Marker extends Message
+case class Ball(num: Int) extends Message
 
-case object Start
 
-object s {
-
-  def main(args: Array[String]) {
-    val system = ActorSystem("SingleRound")
-    val a = system.actorOf(Node.props(1), name = "1")
-    val b = system.actorOf(Node.props(2), name = "2")
-    val c = system.actorOf(Node.props(3), name = "3")
- 
-    // neighbors
-    a ! b
-
-    b ! c
-
-    c ! a
-    c ! b
-
-    // balls 
-
-    a ! Ball(1)
-    a ! Ball(2)
-    a ! Ball(3)
-
-    b ! Ball(4)
-    b ! Ball(5)
-
-    c ! Ball(6)
-    c ! Ball(7)
-    c ! Ball(8)
- 
-    // start snapshot procedure
-
-    a ! Start
-    b ! Start
-    c ! Start
-    
-  }
-
-}
