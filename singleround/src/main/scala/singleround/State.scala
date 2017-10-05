@@ -17,6 +17,10 @@
  */
 package singleround
 
-sealed trait Message
-case object Marker extends Message
-case class Ball(num: Int) extends Message
+/**
+ * Messages snapshotted won't contain Marker.
+ */
+case class State(messages: Seq[Message] = Seq.empty[Message])
+case class Channel(name: String, messages: Seq[Message] = Seq.empty[Message]) {
+  require(null != name && !"".equals(name), "Channel name can't be empty!")
+}

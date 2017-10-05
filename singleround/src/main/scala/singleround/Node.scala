@@ -32,10 +32,25 @@ trait Node extends Actor with ActorLogging {
   override def receive = initialize
 
   def initialize(): Actor.Receive = {
-    case neighbor: ActorRef =>
+    case neighbor: ActorRef => /* TODO: 
+      - setup neighbors relationships.
+      - setup Recorder State, Channel.
+    */
     case message: Message =>
     case Start =>
+    case unknown@_ => 
   }
 }
 class Initiator(id: Int) extends Node 
 class Receiver(id: Int) extends Node
+
+/**
+ * Initialize State, Channel objects.
+ */
+class Recorder extends Actor with ActorLogging {
+
+  override def receive = { 
+    case unknown@_ => 
+  }
+
+}
